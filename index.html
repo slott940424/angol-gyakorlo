@@ -270,10 +270,70 @@ function weightedVocab(){
 
 document.getElementById("weekLabel").textContent = WEEK_INFO.label;
 
+/* ---------- FÉLBEHAGYOTT GYAKORLÁS MENTÉSE/BETÖLTÉSE ---------- */
+const PROGRESS_KEY = "angol_progress_v1";
+
+function persistSession(){
+  try{
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({
+      weekLabel: WEEK_INFO.label,
+      savedAt: new Date().toISOString(),
+      session: session
+    }));
+  }catch(e){}
+}
+function clearProgress(){
+  try{ localStorage.removeItem(PROGRESS_KEY); }catch(e){}
+}
+function loadSavedProgress(){
+  try{
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    if(!data || data.weekLabel !== WEEK_INFO.label){ clearProgress(); return null; }
+    if(!data.session || !Array.isArray(data.session.queue) || data.session.index >= data.session.queue.length){ clearProgress(); return null; }
+    return data;
+  }catch(e){ return null; }
+}
+function modeLabel(mode){
+  if(mode==="flashcards") return "Szókártyák";
+  if(mode==="translate-en-hu") return "Fordítás EN→HU";
+  if(mode==="translate-hu-en") return "Fordítás HU→EN";
+  if(mode==="grammar") return "Nyelvtan";
+  if(mode==="exam") return "Vizsga";
+  return mode || "";
+}
+function resumeSession(){
+  const data = loadSavedProgress();
+  if(!data) return renderHome();
+  session = data.session;
+  const mode = session.mode;
+  if(mode === "flashcards") return renderFlashcard();
+  if(mode && mode.indexOf("translate-")===0) return renderTranslate();
+  if(mode === "grammar") return renderGrammar();
+  if(mode === "exam") return renderExamStep();
+  renderHome();
+}
+function discardSavedProgress(){
+  clearProgress();
+  renderHome();
+}
+
 function renderHome(){
   session = { queue:[], index:0, correct:0, wrong:[], known:[], mode:"" };
   const el = document.getElementById("main");
+  const saved = loadSavedProgress();
   el.innerHTML = `
+    ${saved ? `
+    <div class="card" style="border-color:var(--accent);">
+      <div class="tag">Félbehagyott gyakorlás</div>
+      <div style="font-size:14px; margin-bottom:12px;">${modeLabel(saved.session.mode)} — ${saved.session.index}/${saved.session.queue.length} kérdésnél tartottál. Folytatod, vagy inkább újat kezdesz?</div>
+      <div class="row">
+        <button class="btn secondary" onclick="discardSavedProgress()">Elvetés</button>
+        <button class="btn" onclick="resumeSession()">Folytatás</button>
+      </div>
+    </div>
+    ` : ""}
     <div class="grid">
       <div class="tile" onclick="startFlashcards()"><span class="emoji">🃏</span><div class="label">Szókártyák</div><div class="count">${VOCAB.length} szó</div></div>
       <div class="tile" onclick="startTranslate('en-hu')"><span class="emoji">🇬🇧→🇭🇺</span><div class="label">Fordítás</div><div class="count">angol → magyar</div></div>
@@ -284,7 +344,7 @@ function renderHome(){
     ${FORM_CONFIG.actionUrl===""?`<div class="banner">A Google Form napló még nincs bekötve — az eredmények egyelőre csak a készüléken jelennek meg a gyakorlás végén, exportálhatók.</div>`:""}
     <div class="card">
       <div class="tag">Info</div>
-      <div style="font-size:13px; color:var(--muted); line-height:1.5;">A gyakorlás a friss anyagra fókuszál, de mindig visszahoz korábbi szavakat is, hogy ne felejtsd el őket. Minden gyakorlás végén elmentjük az eredményt.</div>
+      <div style="font-size:13px; color:var(--muted); line-height:1.5;">A gyakorlás a friss anyagra fókuszál, de mindig visszahoz korábbi szavakat is, hogy ne felejtsd el őket. Ha félbehagyod, a haladásod megmarad ezen a készüléken, és később onnan folytathatod, ahol abbahagytad.</div>
     </div>
   `;
 }
@@ -300,6 +360,7 @@ function progressBar(){
 
 /* ---------- FLASHCARDS ---------- */
 function startFlashcards(){
+  clearProgress();
   session = { queue: weightedVocab(), index:0, correct:0, wrong:[], known:[], mode:"flashcards", flipped:false };
   renderFlashcard();
 }
@@ -338,11 +399,13 @@ function answerFlash(knew){
   const item = session.current;
   if(knew){ session.correct++; session.known.push(item); } else { session.wrong.push(item); }
   session.index++;
+  persistSession();
   renderFlashcard();
 }
 
 /* ---------- TRANSLATE ---------- */
 function startTranslate(dir){
+  clearProgress();
   session = { queue: shuffle(VOCAB), index:0, correct:0, wrong:[], known:[], mode:"translate-"+dir, dir };
   renderTranslate();
 }
@@ -370,7 +433,7 @@ function renderTranslate(){
 }
 function checkTranslate(){
   const btn = document.getElementById("checkBtn");
-  if(btn.dataset.state==="next"){ session.index++; return renderTranslate(); }
+  if(btn.dataset.state==="next"){ session.index++; persistSession(); return renderTranslate(); }
   const item = session.current;
   const input = document.getElementById("answerInput");
   const given = normalize(input.value);
@@ -385,11 +448,13 @@ function checkTranslate(){
     session.wrong.push(item);
     fb.innerHTML = `<div class="feedback bad">❌ Helyes válasz: <b>${accepted[0]}</b></div>`;
   }
+  persistSession();
   btn.textContent = "Következő"; btn.dataset.state="next";
 }
 
 /* ---------- GRAMMAR ---------- */
 function startGrammar(){
+  clearProgress();
   session = { queue: shuffle(GRAMMAR), index:0, correct:0, wrong:[], known:[], mode:"grammar" };
   renderGrammar();
 }
@@ -422,18 +487,20 @@ function answerGrammar(i){
   const ok = i===item.correctIndex;
   if(ok){ session.correct++; session.known.push({en:item.topic, hu:item.topic}); }
   else { session.wrong.push({en:item.topic, hu:item.topic}); }
+  persistSession();
   const note = document.createElement("div");
   note.className = "feedback " + (ok?"good":"bad");
   note.innerHTML = (ok?"✅ ":"❌ ") + item.note;
   document.getElementById("main").appendChild(note);
   const next = document.createElement("button");
   next.className="btn"; next.textContent="Következő"; next.style.marginTop="12px";
-  next.onclick = ()=>{ session.index++; renderGrammar(); };
+  next.onclick = ()=>{ session.index++; persistSession(); renderGrammar(); };
   document.getElementById("main").appendChild(next);
 }
 
 /* ---------- EXAM ---------- */
 function startExam(){
+  clearProgress();
   const words = shuffle(VOCAB).slice(0, Math.min(8, VOCAB.length));
   const grammar = shuffle(GRAMMAR).slice(0, Math.min(2, GRAMMAR.length));
   session = { queue:[...words.map(w=>({type:"word",item:w})), ...grammar.map(g=>({type:"grammar",item:g}))], index:0, correct:0, wrong:[], known:[], mode:"exam" };
@@ -472,7 +539,7 @@ function renderExamStep(){
 }
 function checkExamWord(){
   const btn = document.getElementById("checkBtn");
-  if(btn.dataset.state==="next"){ session.index++; return renderExamStep(); }
+  if(btn.dataset.state==="next"){ session.index++; persistSession(); return renderExamStep(); }
   const item = session.current.item;
   const given = normalize(document.getElementById("answerInput").value);
   const accepted = session.dir==="en-hu" ? [item.hu] : [item.en];
@@ -482,6 +549,7 @@ function checkExamWord(){
     ? `<div class="feedback good">✅ Helyes!</div>`
     : `<div class="feedback bad">❌ Helyes válasz: <b>${accepted[0]}</b></div>`;
   if(ok){ session.correct++; session.known.push(item); } else { session.wrong.push(item); }
+  persistSession();
   btn.textContent="Következő"; btn.dataset.state="next";
 }
 function checkExamGrammar(i){
@@ -490,14 +558,16 @@ function checkExamGrammar(i){
   boxes.forEach((b,idx)=>{ b.onclick=null; if(idx===item.correctIndex) b.classList.add("correct"); else if(idx===i) b.classList.add("wrong"); });
   const ok = i===item.correctIndex;
   if(ok){ session.correct++; session.known.push({en:item.topic, hu:item.topic}); } else { session.wrong.push({en:item.topic, hu:item.topic}); }
+  persistSession();
   const next = document.createElement("button");
   next.className="btn"; next.textContent="Következő"; next.style.marginTop="12px";
-  next.onclick = ()=>{ session.index++; renderExamStep(); };
+  next.onclick = ()=>{ session.index++; persistSession(); renderExamStep(); };
   document.getElementById("main").appendChild(next);
 }
 
 /* ---------- SUMMARY + SYNC ---------- */
 function renderSummary(){
+  clearProgress();
   const total = session.correct + session.wrong.length;
   const pct = total? Math.round((session.correct/total)*100) : 0;
   const wrongNames = [...new Set(session.wrong.map(w=>w.en))];
