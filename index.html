@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Angol gyakorló</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#171e2e; --panel2:#1f2937; --text:#eef1f6; --muted:#93a0b4;
+    --accent:#5b8def; --good:#3ecf8e; --bad:#ef5b5b; --warn:#f0b429; --border:#2a3346;
+    --radius:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  #app{max-width:480px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column;}
+  header{padding:18px 20px 10px; position:sticky; top:0; background:var(--bg); z-index:5;}
+  header h1{font-size:19px; margin:0 0 2px;}
+  header .sub{color:var(--muted); font-size:13px;}
+  main{flex:1; padding:12px 16px 24px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:14px;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .tile{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px 14px; text-align:center; cursor:pointer; transition:transform .1s, background .15s;}
+  .tile:active{transform:scale(.97); background:var(--panel2);}
+  .tile .emoji{font-size:26px; display:block; margin-bottom:8px;}
+  .tile .label{font-weight:600; font-size:14px;}
+  .tile .count{color:var(--muted); font-size:12px; margin-top:4px;}
+  .tile.exam{grid-column:1/3; background:linear-gradient(135deg,#2a2140,#1f2937); border-color:#4c3a7a;}
+  button{font-family:inherit;}
+  .btn{display:block; width:100%; padding:14px; border:none; border-radius:12px; background:var(--accent); color:#fff; font-size:15px; font-weight:600; cursor:pointer;}
+  .btn:active{opacity:.85;}
+  .btn.secondary{background:var(--panel2); color:var(--text); border:1px solid var(--border);}
+  .btn.good{background:var(--good);}
+  .btn.bad{background:var(--bad);}
+  .btn.ghost{background:transparent; border:1px solid var(--border); color:var(--muted);}
+  .row{display:flex; gap:10px;}
+  .row > *{flex:1;}
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .backbtn{color:var(--muted); font-size:14px; background:none; border:none; padding:6px 0;}
+  .progress{height:6px; background:var(--panel2); border-radius:6px; overflow:hidden; margin-bottom:16px;}
+  .progress > div{height:100%; background:var(--accent); transition:width .25s;}
+  .flash{min-height:220px; display:flex; align-items:center; justify-content:center; text-align:center; border-radius:var(--radius); background:var(--panel); border:1px solid var(--border); padding:24px; margin-bottom:16px; cursor:pointer; user-select:none;}
+  .flash .word{font-size:26px; font-weight:700;}
+  .flash .hint{color:var(--muted); font-size:13px; margin-top:10px;}
+  .flash .example{color:var(--muted); font-size:14px; margin-top:14px; font-style:italic;}
+  .tag{display:inline-block; font-size:11px; color:var(--muted); background:var(--panel2); border:1px solid var(--border); border-radius:20px; padding:3px 10px; margin-bottom:10px;}
+  input[type=text]{width:100%; padding:14px; border-radius:12px; border:1px solid var(--border); background:var(--panel2); color:var(--text); font-size:16px; margin-bottom:12px;}
+  .feedback{border-radius:12px; padding:12px 14px; margin-bottom:12px; font-size:14px;}
+  .feedback.good{background:rgba(62,207,142,.12); border:1px solid var(--good); color:var(--good);}
+  .feedback.bad{background:rgba(239,91,91,.12); border:1px solid var(--bad); color:#ff9d9d;}
+  .summary-row{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); font-size:14px;}
+  .summary-row:last-child{border-bottom:none;}
+  .missed{color:var(--bad);}
+  .known{color:var(--good);}
+  .muted{color:var(--muted);}
+  .center{text-align:center;}
+  .big{font-size:38px; font-weight:800;}
+  .choices{display:flex; flex-direction:column; gap:10px; margin:14px 0;}
+  .choice{padding:14px; border-radius:12px; border:1px solid var(--border); background:var(--panel2); font-size:15px; text-align:left; cursor:pointer;}
+  .choice.correct{border-color:var(--good); background:rgba(62,207,142,.12);}
+  .choice.wrong{border-color:var(--bad); background:rgba(239,91,91,.12);}
+  footer{padding:10px 16px 18px; font-size:11px; color:var(--muted); text-align:center;}
+  .banner{font-size:12px; padding:10px 14px; border-radius:10px; margin-bottom:14px; background:rgba(240,180,41,.12); border:1px solid var(--warn); color:#ffd479;}
+  .hidden{display:none !important;}
+  textarea{width:100%; min-height:110px; border-radius:12px; border:1px solid var(--border); background:var(--panel2); color:var(--text); padding:12px; font-size:13px; font-family:monospace;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🇬🇧 Angol gyakorló</h1>
+    <div class="sub" id="weekLabel"></div>
+  </header>
+  <main id="main"></main>
+  <footer>Heti anyag automatikusan frissül · Adatok: Angol notebook</footer>
+</div>
+
+<script>
+/* =========================================================
+   HETI ADAT — ezt a blokkot cseréli le a szerdai automata elemzés
+   ========================================================= */
+const WEEK_INFO = {
+  label: "2026-08-18 \u00b7 Kezdeti anyagfelt\u00f6lt\u00e9s a teljes notebookb\u00f3l \u2014 munkav\u00e9delem, m\u00faltid\u0151k, m\u00f3dbeli seg\u00e9dig\u00e9k, passz\u00edv, present perfect \u00e9s m\u0171veltet\u00e9s fókuszban.",
+  examWeek: false
+};
+
+const FORM_CONFIG = {
+  actionUrl: "",
+  entries: {
+    datetime: "", tipus: "", helyes: "", osszes: "", jol: "", rosszul: "", megjegyzes: ""
+  }
+};
+
+const VOCAB = [
+  {id:"v1", en:"fire extinguisher", hu:"poroltó", ex_en:"Where is the nearest fire extinguisher?", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v2", en:"welding helmet", hu:"hegesztőmaszk", ex_en:"Always wear a welding helmet when welding.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v3", en:"welding gloves", hu:"hegesztőkesztyű", ex_en:"Put on your welding gloves first.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v4", en:"confined space", hu:"behatárolt tér", ex_en:"Never enter a confined space alone.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v5", en:"hot work permit", hu:"tűzgyújtási engedély", ex_en:"You need a hot work permit for this job.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v6", en:"scaffold", hu:"állványzat", ex_en:"Check the scaffold before climbing it.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v7", en:"forklift", hu:"targonca", ex_en:"The forklift operator needs a licence.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v8", en:"machine operator", hu:"gépkezelő", ex_en:"He is a certified machine operator.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v9", en:"flammable material", hu:"éghető anyag", ex_en:"Keep flammable material away from sparks.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v10", en:"respiratory protection equipment", hu:"légzésvédelmi eszköz", ex_en:"Wear respiratory protection equipment in this area.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v11", en:"chemicals", hu:"vegyi anyagok", ex_en:"Store the chemicals in a safe place.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v12", en:"emergency", hu:"vészhelyzet", ex_en:"Call this number in case of emergency.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v13", en:"fit to work", hu:"munkára képes állapot", ex_en:"You must be fit to work before your shift.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v14", en:"compliance", hu:"megfelelés", ex_en:"We check compliance every month.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v15", en:"waste management", hu:"hulladékkezelés", ex_en:"Waste management is everyone's responsibility.", ex_hu:"", topic:"Munkavédelem", box:1},
+  {id:"v16", en:"to take", hu:"venni / elvenni", ex_en:"I took the wrong bus.", ex_hu:"", topic:"Alapigék", box:3},
+  {id:"v17", en:"to give", hu:"adni", ex_en:"Can you give me a hand?", ex_hu:"", topic:"Alapigék", box:3},
+  {id:"v18", en:"to break", hu:"törni", ex_en:"Be careful, don't break it.", ex_hu:"", topic:"Alapigék", box:3},
+  {id:"v19", en:"to build", hu:"építeni", ex_en:"They built a new scaffold.", ex_hu:"", topic:"Alapigék", box:3},
+  {id:"v20", en:"to understand", hu:"érteni", ex_en:"I don't understand this rule.", ex_hu:"", topic:"Alapigék", box:3},
+  {id:"v21", en:"to forget", hu:"elfelejteni", ex_en:"I forgot my gloves at home.", ex_hu:"", topic:"Alapigék", box:3},
+  {id:"v22", en:"to choose", hu:"választani", ex_en:"You can choose either option.", ex_hu:"", topic:"Alapigék", box:3},
+  {id:"v23", en:"to know", hu:"tudni / ismerni", ex_en:"Do you know the procedure?", ex_hu:"", topic:"Alapigék", box:3},
+  {id:"v24", en:"to take a break", hu:"szünetet tartani", ex_en:"Let's take a break for ten minutes.", ex_hu:"", topic:"Kifejezések", box:2},
+  {id:"v25", en:"to take care of", hu:"elintézni / vigyázni", ex_en:"I took care of the paperwork.", ex_hu:"", topic:"Kifejezések", box:2},
+  {id:"v26", en:"to take a risk", hu:"kockáztatni", ex_en:"Don't take unnecessary risks at work.", ex_hu:"", topic:"Kifejezések", box:2},
+  {id:"v27", en:"to take a look at", hu:"ránézni valamire", ex_en:"Take a look at this report.", ex_hu:"", topic:"Kifejezések", box:2},
+  {id:"v28", en:"to take responsibility", hu:"felelősséget vállalni", ex_en:"You need to take responsibility for this.", ex_hu:"", topic:"Kifejezések", box:2},
+  {id:"v29", en:"it worked out", hu:"sikerült", ex_en:"In the end, it worked out great.", ex_hu:"", topic:"Kifejezések", box:2},
+  {id:"v30", en:"for ages", hu:"ezer éve", ex_en:"I haven't seen him for ages.", ex_hu:"", topic:"Kifejezések", box:2},
+  {id:"v31", en:"since then", hu:"azóta", ex_en:"We met in June, and since then we talk every week.", ex_hu:"", topic:"Kifejezések", box:2},
+  {id:"v32", en:"can / can't", hu:"lehet/tudni — nem lehet", ex_en:"You can't smoke in this area.", ex_hu:"", topic:"Segédigék", box:2},
+  {id:"v33", en:"could", hu:"tudott / tudna / kérés", ex_en:"Could you help me with this?", ex_hu:"", topic:"Segédigék", box:2},
+  {id:"v34", en:"be able to", hu:"képesnek lenni valamire", ex_en:"I wasn't able to finish it yesterday.", ex_hu:"", topic:"Segédigék", box:2},
+  {id:"v35", en:"should / shouldn't", hu:"kellene / nem kellene", ex_en:"You shouldn't work so much overtime.", ex_hu:"", topic:"Segédigék", box:2},
+  {id:"v36", en:"supposed to", hu:"kéne, elvárt", ex_en:"You're supposed to wear a helmet here.", ex_hu:"", topic:"Segédigék", box:2},
+  {id:"v37", en:"have you ever...?", hu:"voltál már valaha...?", ex_en:"Have you ever been to Paris?", ex_hu:"", topic:"Present Perfect", box:1},
+  {id:"v38", en:"already", hu:"már", ex_en:"I have already finished the report.", ex_hu:"", topic:"Present Perfect", box:1},
+  {id:"v39", en:"yet", hu:"még (nem)", ex_en:"I haven't sent it yet.", ex_hu:"", topic:"Present Perfect", box:1},
+  {id:"v40", en:"how long have you...", hu:"mióta...", ex_en:"How long have you worked here?", ex_hu:"", topic:"Present Perfect", box:1},
+  {id:"v41", en:"must be checked", hu:"ellenőrizni kell", ex_en:"The equipment must be checked daily.", ex_hu:"", topic:"Passzív szerkezet", box:1},
+  {id:"v42", en:"can be done", hu:"meg lehet csinálni", ex_en:"This can be done by tomorrow.", ex_hu:"", topic:"Passzív szerkezet", box:1},
+  {id:"v43", en:"can't be helped", hu:"nem lehet rajta segíteni", ex_en:"It can't be helped now.", ex_hu:"", topic:"Passzív szerkezet", box:1},
+  {id:"v44", en:"had something done", hu:"megcsináltattam valamivel", ex_en:"I had my car fixed yesterday.", ex_hu:"", topic:"Műveltetés", box:1},
+  {id:"v45", en:"to have your teeth checked", hu:"megvizsgáltatni a fogad", ex_en:"I have my teeth checked twice a year.", ex_hu:"", topic:"Műveltetés", box:1},
+  {id:"v46", en:"to make someone do something", hu:"megcsináltatni valakivel", ex_en:"My boss made me redo the report.", ex_hu:"", topic:"Műveltetés", box:1},
+  {id:"v47", en:"slowly", hu:"lassan", ex_en:"Please drive slowly here.", ex_hu:"", topic:"Határozószók", box:2},
+  {id:"v48", en:"badly", hu:"rosszul", ex_en:"The machine was badly damaged.", ex_hu:"", topic:"Határozószók", box:2},
+  {id:"v49", en:"easily", hu:"könnyen", ex_en:"This can be fixed easily.", ex_hu:"", topic:"Határozószók", box:2},
+  {id:"v50", en:"suddenly", hu:"hirtelen", ex_en:"Suddenly, the alarm went off.", ex_hu:"", topic:"Határozószók", box:2},
+  {id:"v51", en:"well", hu:"jól (rendhagyó)", ex_en:"She did the job well.", ex_hu:"", topic:"Határozószók", box:2},
+  {id:"v52", en:"exhausted / exhausting", hu:"kimerült / kimerítő", ex_en:"It was an exhausting shift, I am exhausted.", ex_hu:"", topic:"Melléknevek", box:2},
+  {id:"v53", en:"confused / confusing", hu:"összezavart / összezavaró", ex_en:"The instructions were confusing.", ex_hu:"", topic:"Melléknevek", box:2},
+  {id:"v54", en:"interested / interesting", hu:"érdeklődő / érdekes", ex_en:"I'm interested in this topic.", ex_hu:"", topic:"Melléknevek", box:2},
+  {id:"v55", en:"stressed / stressing", hu:"stresszes / stresszt okozó", ex_en:"This deadline is really stressing me out.", ex_hu:"", topic:"Melléknevek", box:2},
+  {id:"v56", en:"useless", hu:"haszontalan", ex_en:"This old tool is useless now.", ex_hu:"", topic:"Képzők (-less)", box:3},
+  {id:"v57", en:"careless", hu:"hanyag / óvatlan", ex_en:"Being careless at work is dangerous.", ex_hu:"", topic:"Képzők (-less)", box:3},
+  {id:"v58", en:"harmless", hu:"ártalmatlan", ex_en:"Don't worry, it's harmless.", ex_hu:"", topic:"Képzők (-less)", box:3},
+  {id:"v59", en:"used to", hu:"régen (szokott)", ex_en:"I used to work night shifts.", ex_hu:"", topic:"Múltbeli szokás", box:2},
+  {id:"v60", en:"going to", hu:"fog (tervezett jövő)", ex_en:"We are going to start at 8 tomorrow.", ex_hu:"", topic:"Jövő idő", box:2},
+  {id:"v61", en:"was/were going to", hu:"akart(am/unk) — de nem lett belőle", ex_en:"I was going to call you, but I forgot.", ex_hu:"", topic:"Jövő idő (múltban)", box:3}
+];
+
+const GRAMMAR = [
+  {
+    id:"g1", topic:"Múlt idő: egyszerű vs. folyamatos",
+    explanation:"Egyszerű múlt (-ed): lezárt, egyszeri cselekvés. Folyamatos múlt (was/were + -ing): a cselekvés éppen zajlott, amikor valami más történt, vagy háttér-cselekvés volt.",
+    question:"I ___ (cook) dinner when the phone ___ (ring).",
+    choices:["cooked / rang","was cooking / rang","was cooking / was ringing","cook / rings"],
+    correctIndex:1,
+    note:"A háttérben folyamatosan zajló cselekvés (was cooking) + a közben történő, lezárt esemény (rang)."
+  },
+  {
+    id:"g2", topic:"Múlt idejű kérdés",
+    explanation:"Rendes igéknél a múlt idejű kérdés: Did + alany + alapige (nem ragozott!). A 'to be'-nél Was/Were + alany.",
+    question:"___ you ___ (see) the new safety signs yesterday?",
+    choices:["Did / see","Did / saw","Were / see","Do / saw"],
+    correctIndex:0,
+    note:"Did + alapige (see), nem 'saw'!"
+  },
+  {
+    id:"g3", topic:"Used to",
+    explanation:"'Used to' + alapige: olyan dolgot fejez ki, amit régen rendszeresen csináltunk, de már nem. Csak múlt idejű szokásra használjuk.",
+    question:"I ___ smoke, but I quit two years ago.",
+    choices:["use to","used to","am using to","was used to"],
+    correctIndex:1,
+    note:"used to + alapige = régen szoktam, ma már nem."
+  },
+  {
+    id:"g4", topic:"Could — három jelentés",
+    explanation:"Could kifejezhet: 1) múltbeli képességet (tudtam), 2) feltételes módot (tudnék), 3) udvarias kérést (Tudnál...?).",
+    question:"___ you help me carry this, please?",
+    choices:["Can","Could","Should","Must"],
+    correctIndex:1,
+    note:"Udvarias kérésnél a 'Could' a legtermészetesebb választás (bár a 'Can' is elfogadható, kevésbé formális)."
+  },
+  {
+    id:"g5", topic:"Should — tanács",
+    explanation:"'Should' tanácsadó szó, jelentése kb. 'kellene'. Tagadása: shouldn't (nem kellene).",
+    question:"You look tired. You ___ get some rest.",
+    choices:["should","shouldn't","must not","can't"],
+    correctIndex:0,
+    note:"'should' = tanács: kellene pihenned."
+  },
+  {
+    id:"g6", topic:"Passzív szerkezet",
+    explanation:"Passzív szerkezet: [alany + segédige (be) + 3. alakos ige]. Akkor használjuk, ha a cselekvő ismeretlen vagy nem fontos.",
+    question:"This equipment ___ every single day.",
+    choices:["must check","must be checked","must checked","must be check"],
+    correctIndex:1,
+    note:"must be + 3. alak (checked) — passzív szerkezet."
+  },
+  {
+    id:"g7", topic:"Present Perfect",
+    explanation:"Present Perfect (have/has + 3. alak): befejezett cselekvés, aminek eredménye/hatása a jelenre is érvényes, vagy nincs konkrét időpont.",
+    question:"I ___ (already/finish) the report, but I ___ (not/send) it yet.",
+    choices:["have already finished / haven't sent","already finished / didn't send","have already finished / didn't send","already finished / haven't sent"],
+    correctIndex:0,
+    note:"'already' és 'yet' tipikusan Present Perfect-tel jár."
+  },
+  {
+    id:"g8", topic:"To-infinitive (cél)",
+    explanation:"Cél kifejezésénél 'to + alapige' szerkezetet használunk, nem -ing formát. 'To' után sosem jöhet -ing.",
+    question:"I called the supplier ___ the delivery date.",
+    choices:["for confirming","to confirm","confirming","for confirm"],
+    correctIndex:1,
+    note:"Cél = to + alapige (to confirm), nem 'for confirming'."
+  },
+  {
+    id:"g9", topic:"-ed / -ing melléknevek",
+    explanation:"-ed végződés: az állapotot/érzést leíró személy érez valamit. -ing végződés: a dolog/helyzet, ami kiváltja az érzést.",
+    question:"This training was really ___, so now I feel very ___.",
+    choices:["tiring / tired","tired / tiring","tiring / tiring","tired / tired"],
+    correctIndex:0,
+    note:"A képzés (a dolog) 'tiring' (fárasztó), én (a személy) 'tired' (fáradt) vagyok."
+  },
+  {
+    id:"g10", topic:"Műveltetés — have something done",
+    explanation:"'Have + tárgy + 3. alakos ige' szerkezet: valakivel elvégeztetünk egy szolgáltatást, nem magunk csináljuk.",
+    question:"I don't fix cars myself, so I ___ my car ___ at the garage.",
+    choices:["have / fixed","have / fix","had / fixing","have / to fix"],
+    correctIndex:0,
+    note:"have + tárgy (my car) + 3. alak (fixed) = megjavíttatom a kocsimat."
+  }
+];
+
+/* ========================================================= */
+
+let session = { queue:[], index:0, correct:0, wrong:[], known:[], mode:"" };
+
+function normalize(s){
+  return (s||"").toLowerCase().trim()
+    .replace(/[.,!?;:'"()]/g,"")
+    .replace(/\s+/g," ");
+}
+
+function shuffle(arr){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+function weightedVocab(){
+  // alacsonyabb box -> többször szerepel a körben (gyakrabban gyakoroljuk)
+  let out=[];
+  VOCAB.forEach(v=>{
+    const reps = v.box<=1?3 : v.box<=2?2 : 1;
+    for(let i=0;i<reps;i++) out.push(v);
+  });
+  return shuffle(out);
+}
+
+document.getElementById("weekLabel").textContent = WEEK_INFO.label;
+
+function renderHome(){
+  session = { queue:[], index:0, correct:0, wrong:[], known:[], mode:"" };
+  const el = document.getElementById("main");
+  el.innerHTML = `
+    <div class="grid">
+      <div class="tile" onclick="startFlashcards()"><span class="emoji">🃏</span><div class="label">Szókártyák</div><div class="count">${VOCAB.length} szó</div></div>
+      <div class="tile" onclick="startTranslate('en-hu')"><span class="emoji">🇬🇧→🇭🇺</span><div class="label">Fordítás</div><div class="count">angol → magyar</div></div>
+      <div class="tile" onclick="startTranslate('hu-en')"><span class="emoji">🇭🇺→🇬🇧</span><div class="label">Fordítás</div><div class="count">magyar → angol</div></div>
+      <div class="tile" onclick="startGrammar()"><span class="emoji">📘</span><div class="label">Nyelvtan</div><div class="count">${GRAMMAR.length} feladat</div></div>
+      ${WEEK_INFO.examWeek ? `<div class="tile exam" onclick="startExam()"><span class="emoji">🎓</span><div class="label">Heti vizsga</div><div class="count">Vegyes, időzített</div></div>` : ""}
+    </div>
+    ${FORM_CONFIG.actionUrl===""?`<div class="banner">A Google Form napló még nincs bekötve — az eredmények egyelőre csak a készüléken jelennek meg a gyakorlás végén, exportálhatók.</div>`:""}
+    <div class="card">
+      <div class="tag">Info</div>
+      <div style="font-size:13px; color:var(--muted); line-height:1.5;">A gyakorlás a friss anyagra fókuszál, de mindig visszahoz korábbi szavakat is, hogy ne felejtsd el őket. Minden gyakorlás végén elmentjük az eredményt.</div>
+    </div>
+  `;
+}
+
+function topBar(title, onBack){
+  return `<div class="topbar"><button class="backbtn" onclick="renderHome()">← Vissza</button><b style="font-size:14px;">${title}</b><span style="width:40px;"></span></div>`;
+}
+
+function progressBar(){
+  const pct = session.queue.length? Math.round((session.index/session.queue.length)*100):0;
+  return `<div class="progress"><div style="width:${pct}%"></div></div>`;
+}
+
+/* ---------- FLASHCARDS ---------- */
+function startFlashcards(){
+  session = { queue: weightedVocab(), index:0, correct:0, wrong:[], known:[], mode:"flashcards", flipped:false };
+  renderFlashcard();
+}
+function renderFlashcard(){
+  const el = document.getElementById("main");
+  if(session.index >= session.queue.length){ return renderSummary(); }
+  const item = session.queue[session.index];
+  const showEn = Math.random()<0.5;
+  session.current = item; session.flipped=false; session.showEn=showEn;
+  el.innerHTML = `
+    ${topBar("Szókártyák")}
+    ${progressBar()}
+    <div class="flash" id="flashcard" onclick="flipCard()">
+      <div>
+        <div class="tag">${item.topic}</div>
+        <div class="word" id="flashWord">${showEn?item.en:item.hu}</div>
+        <div class="hint" id="flashHint">Koppints a megfordításhoz</div>
+      </div>
+    </div>
+    <div id="flashActions"></div>
+  `;
+}
+function flipCard(){
+  if(session.flipped) return;
+  session.flipped = true;
+  const item = session.current;
+  document.getElementById("flashWord").textContent = session.showEn ? item.hu : item.en;
+  document.getElementById("flashHint").innerHTML = `<div class="example">${item.ex_en}<br>${item.ex_hu}</div>`;
+  document.getElementById("flashActions").innerHTML = `
+    <div class="row">
+      <button class="btn bad" onclick="answerFlash(false)">Nem tudtam</button>
+      <button class="btn good" onclick="answerFlash(true)">Tudtam</button>
+    </div>`;
+}
+function answerFlash(knew){
+  const item = session.current;
+  if(knew){ session.correct++; session.known.push(item); } else { session.wrong.push(item); }
+  session.index++;
+  renderFlashcard();
+}
+
+/* ---------- TRANSLATE ---------- */
+function startTranslate(dir){
+  session = { queue: shuffle(VOCAB), index:0, correct:0, wrong:[], known:[], mode:"translate-"+dir, dir };
+  renderTranslate();
+}
+function renderTranslate(){
+  const el = document.getElementById("main");
+  if(session.index >= session.queue.length){ return renderSummary(); }
+  const item = session.queue[session.index];
+  session.current = item;
+  const prompt = session.dir==="en-hu" ? item.en : item.hu;
+  const label = session.dir==="en-hu" ? "Írd le magyarul:" : "Írd le angolul:";
+  el.innerHTML = `
+    ${topBar(session.dir==="en-hu" ? "Fordítás EN→HU" : "Fordítás HU→EN")}
+    ${progressBar()}
+    <div class="card">
+      <div class="tag">${item.topic}</div>
+      <div style="font-size:22px; font-weight:700; margin-bottom:6px;">${prompt}</div>
+      <div class="muted" style="font-size:13px;">${label}</div>
+    </div>
+    <input type="text" id="answerInput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Válaszod...">
+    <div id="feedbackBox"></div>
+    <button class="btn" id="checkBtn" onclick="checkTranslate()">Ellenőrzés</button>
+  `;
+  document.getElementById("answerInput").focus();
+  document.getElementById("answerInput").addEventListener("keydown", e=>{ if(e.key==="Enter") checkTranslate(); });
+}
+function checkTranslate(){
+  const btn = document.getElementById("checkBtn");
+  if(btn.dataset.state==="next"){ session.index++; return renderTranslate(); }
+  const item = session.current;
+  const input = document.getElementById("answerInput");
+  const given = normalize(input.value);
+  const accepted = session.dir==="en-hu" ? [item.hu] : [item.en];
+  const ok = accepted.some(a=>normalize(a)===given) && given.length>0;
+  input.disabled = true;
+  const fb = document.getElementById("feedbackBox");
+  if(ok){
+    session.correct++; session.known.push(item);
+    fb.innerHTML = `<div class="feedback good">✅ Helyes!</div>`;
+  } else {
+    session.wrong.push(item);
+    fb.innerHTML = `<div class="feedback bad">❌ Helyes válasz: <b>${accepted[0]}</b></div>`;
+  }
+  btn.textContent = "Következő"; btn.dataset.state="next";
+}
+
+/* ---------- GRAMMAR ---------- */
+function startGrammar(){
+  session = { queue: shuffle(GRAMMAR), index:0, correct:0, wrong:[], known:[], mode:"grammar" };
+  renderGrammar();
+}
+function renderGrammar(){
+  const el = document.getElementById("main");
+  if(session.index >= session.queue.length){ return renderSummary(); }
+  const item = session.queue[session.index];
+  session.current = item;
+  el.innerHTML = `
+    ${topBar("Nyelvtan")}
+    ${progressBar()}
+    <div class="card">
+      <div class="tag">${item.topic}</div>
+      <div style="font-size:13px; color:var(--muted); margin-bottom:10px; line-height:1.5;">${item.explanation}</div>
+      <div style="font-size:17px; font-weight:600;">${item.question}</div>
+    </div>
+    <div class="choices" id="choicesBox">
+      ${item.choices.map((c,i)=>`<div class="choice" onclick="answerGrammar(${i})">${c}</div>`).join("")}
+    </div>
+  `;
+}
+function answerGrammar(i){
+  const item = session.current;
+  const boxes = document.querySelectorAll("#choicesBox .choice");
+  boxes.forEach((b,idx)=>{
+    b.onclick=null;
+    if(idx===item.correctIndex) b.classList.add("correct");
+    else if(idx===i) b.classList.add("wrong");
+  });
+  const ok = i===item.correctIndex;
+  if(ok){ session.correct++; session.known.push({en:item.topic, hu:item.topic}); }
+  else { session.wrong.push({en:item.topic, hu:item.topic}); }
+  const note = document.createElement("div");
+  note.className = "feedback " + (ok?"good":"bad");
+  note.innerHTML = (ok?"✅ ":"❌ ") + item.note;
+  document.getElementById("main").appendChild(note);
+  const next = document.createElement("button");
+  next.className="btn"; next.textContent="Következő"; next.style.marginTop="12px";
+  next.onclick = ()=>{ session.index++; renderGrammar(); };
+  document.getElementById("main").appendChild(next);
+}
+
+/* ---------- EXAM ---------- */
+function startExam(){
+  const words = shuffle(VOCAB).slice(0, Math.min(8, VOCAB.length));
+  const grammar = shuffle(GRAMMAR).slice(0, Math.min(2, GRAMMAR.length));
+  session = { queue:[...words.map(w=>({type:"word",item:w})), ...grammar.map(g=>({type:"grammar",item:g}))], index:0, correct:0, wrong:[], known:[], mode:"exam" };
+  session.queue = shuffle(session.queue);
+  renderExamStep();
+}
+function renderExamStep(){
+  const el = document.getElementById("main");
+  if(session.index >= session.queue.length){ return renderSummary(); }
+  const step = session.queue[session.index];
+  session.current = step;
+  if(step.type==="word"){
+    const dir = Math.random()<0.5 ? "en-hu":"hu-en";
+    session.dir = dir;
+    const item = step.item;
+    const prompt = dir==="en-hu"?item.en:item.hu;
+    el.innerHTML = `
+      ${topBar("🎓 Vizsga")}
+      ${progressBar()}
+      <div class="card"><div class="tag">Szó</div><div style="font-size:22px; font-weight:700;">${prompt}</div></div>
+      <input type="text" id="answerInput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Válaszod...">
+      <div id="feedbackBox"></div>
+      <button class="btn" id="checkBtn" onclick="checkExamWord()">Ellenőrzés</button>
+    `;
+    document.getElementById("answerInput").focus();
+    document.getElementById("answerInput").addEventListener("keydown", e=>{ if(e.key==="Enter") checkExamWord(); });
+  } else {
+    const item = step.item;
+    el.innerHTML = `
+      ${topBar("🎓 Vizsga")}
+      ${progressBar()}
+      <div class="card"><div class="tag">Nyelvtan</div><div style="font-size:17px; font-weight:600;">${item.question}</div></div>
+      <div class="choices" id="choicesBox">${item.choices.map((c,i)=>`<div class="choice" onclick="checkExamGrammar(${i})">${c}</div>`).join("")}</div>
+    `;
+  }
+}
+function checkExamWord(){
+  const btn = document.getElementById("checkBtn");
+  if(btn.dataset.state==="next"){ session.index++; return renderExamStep(); }
+  const item = session.current.item;
+  const given = normalize(document.getElementById("answerInput").value);
+  const accepted = session.dir==="en-hu" ? [item.hu] : [item.en];
+  const ok = accepted.some(a=>normalize(a)===given) && given.length>0;
+  document.getElementById("answerInput").disabled = true;
+  document.getElementById("feedbackBox").innerHTML = ok
+    ? `<div class="feedback good">✅ Helyes!</div>`
+    : `<div class="feedback bad">❌ Helyes válasz: <b>${accepted[0]}</b></div>`;
+  if(ok){ session.correct++; session.known.push(item); } else { session.wrong.push(item); }
+  btn.textContent="Következő"; btn.dataset.state="next";
+}
+function checkExamGrammar(i){
+  const item = session.current.item;
+  const boxes = document.querySelectorAll("#choicesBox .choice");
+  boxes.forEach((b,idx)=>{ b.onclick=null; if(idx===item.correctIndex) b.classList.add("correct"); else if(idx===i) b.classList.add("wrong"); });
+  const ok = i===item.correctIndex;
+  if(ok){ session.correct++; session.known.push({en:item.topic, hu:item.topic}); } else { session.wrong.push({en:item.topic, hu:item.topic}); }
+  const next = document.createElement("button");
+  next.className="btn"; next.textContent="Következő"; next.style.marginTop="12px";
+  next.onclick = ()=>{ session.index++; renderExamStep(); };
+  document.getElementById("main").appendChild(next);
+}
+
+/* ---------- SUMMARY + SYNC ---------- */
+function renderSummary(){
+  const total = session.correct + session.wrong.length;
+  const pct = total? Math.round((session.correct/total)*100) : 0;
+  const wrongNames = [...new Set(session.wrong.map(w=>w.en))];
+  const knownNames = [...new Set(session.known.map(w=>w.en))];
+  const el = document.getElementById("main");
+  el.innerHTML = `
+    ${topBar("Összegzés")}
+    <div class="card center">
+      <div class="muted" style="font-size:13px; margin-bottom:6px;">Eredmény</div>
+      <div class="big">${session.correct}/${total}</div>
+      <div class="muted" style="margin-top:4px;">${pct}% helyes</div>
+    </div>
+    <div class="card">
+      <div class="summary-row"><span>Jól ment</span><span class="known">${knownNames.length? knownNames.join(", ") : "—"}</span></div>
+      <div class="summary-row"><span>Nehéz volt</span><span class="missed">${wrongNames.length? wrongNames.join(", ") : "—"}</span></div>
+    </div>
+    <div id="syncStatus"></div>
+    <button class="btn" onclick="submitResults()">Eredmény mentése</button>
+    <button class="btn secondary" style="margin-top:10px;" onclick="renderHome()">Vissza a főoldalra</button>
+    <div id="exportBox"></div>
+  `;
+}
+
+function submitResults(){
+  const total = session.correct + session.wrong.length;
+  const wrongNames = [...new Set(session.wrong.map(w=>w.en))];
+  const knownNames = [...new Set(session.known.map(w=>w.en))];
+  const payload = {
+    datetime: new Date().toISOString(),
+    tipus: session.mode,
+    helyes: session.correct,
+    osszes: total,
+    jol: knownNames.join(", "),
+    rosszul: wrongNames.join(", "),
+    megjegyzes: ""
+  };
+
+  // helyi biztonsági mentés (mindig)
+  try{
+    const log = JSON.parse(localStorage.getItem("angol_log")||"[]");
+    log.push(payload);
+    localStorage.setItem("angol_log", JSON.stringify(log));
+  }catch(e){}
+
+  const statusEl = document.getElementById("syncStatus");
+
+  if(FORM_CONFIG.actionUrl){
+    const fd = new FormData();
+    Object.keys(FORM_CONFIG.entries).forEach(k=>{
+      if(FORM_CONFIG.entries[k]) fd.append(FORM_CONFIG.entries[k], payload[k]);
+    });
+    fetch(FORM_CONFIG.actionUrl, { method:"POST", mode:"no-cors", body:fd })
+      .then(()=>{ statusEl.innerHTML = `<div class="feedback good">☁️ Eredmény elküldve.</div>`; })
+      .catch(()=>{ statusEl.innerHTML = `<div class="feedback bad">⚠️ Nem sikerült elküldeni, de mentve helyben.</div>`; showExport(payload); });
+  } else {
+    statusEl.innerHTML = `<div class="feedback bad">⚠️ A napló még nincs bekötve — az eredmény helyben elmentve. Exportáld és küldd el a chatben, ha szeretnéd, hogy bekerüljön az elemzésbe.</div>`;
+    showExport(payload);
+  }
+}
+
+function showExport(payload){
+  document.getElementById("exportBox").innerHTML = `
+    <div class="card" style="margin-top:12px;">
+      <div class="muted" style="font-size:12px; margin-bottom:8px;">Másold ki és küldd el a chatben:</div>
+      <textarea readonly onclick="this.select()">${JSON.stringify(payload)}</textarea>
+    </div>`;
+}
+
+renderHome();
+</script>
+</body>
+</html>
